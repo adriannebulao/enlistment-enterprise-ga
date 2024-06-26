@@ -47,8 +47,17 @@ class SectionsController {
     public String createSection(@RequestParam String sectionId, @RequestParam String subjectId, @RequestParam Days days,
                                 @RequestParam String start, @RequestParam String end, @RequestParam String roomName,
                                 RedirectAttributes redirectAttrs) {
+        Subject subject = subjectRepo.findById(subjectId).get();
+        Room room = roomRepo.findById(roomName).get();
+        Section section = new Section(sectionId, subject, new Schedule(days, new Period(LocalTime.parse(start),
+                LocalTime.parse(end))), room);
 
-        return "redirect:/enlist";
+        sectionRepo.save(section);
+
+        redirectAttrs.addFlashAttribute("sectionSuccessMessage",
+                "Successfully created new section " + sectionId);
+
+        return "redirect:sections";
     }
 
     @ExceptionHandler(EnlistmentException.class)
