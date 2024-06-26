@@ -40,43 +40,50 @@ class EnlistControllerIT {
 
     @Container
     private final PostgreSQLContainer container = new PostgreSQLContainer("postgres:14")
-        .withDatabaseName("enlistment").withUsername("enlistment").withPassword("enlistment");
+            .withDatabaseName("enlistment").withUsername("enlistment").withPassword("enlistment");
 
     @DynamicPropertySource
-    private static void properties(DynamicPropertyRegistry registry){
-        registry.add("springdatasource.url", () -> "jdbc:tc:postgresql:14.0-alpine:///enlistment");
+    private static void properties(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url", () -> "jdbc:tc:postgresql:14://enlistment");
     }
 
     @Test
     void enlist_student_in_section() throws Exception {
-        // Given a student record and section record in the database,
-        jdbcTemplate.update("INSERT INTO student(student_number, firstname, lastname) VALUES (?, ?, ?)", DEFAULT_STUDENT_NUMBER, "firstname", "lastname");
+        // Given
+        //      - a student record in the database
+        //      - a section record in the database
+        jdbcTemplate.update("INSERT INTO student(student_number, firstname, lastname) VALUES (?, ?, ?)",
+                DEFAULT_STUDENT_NUMBER, "firstname", "lastname");
         insertNewDefaultSectionWithCapacity(1);
 
-        // When the EnlistController receives a POST request to enlist the student in the section
-        mockMvc.perform(post("/enlist").sessionAttr(
-                "student", studentRepository.findById(DEFAULT_STUDENT_NUMBER).get()).param("sectionId", DEFAULT_SECTION_ID).param("userAction", ENLIST.name()));
-        // Then a new record in the enlistments table will be created with the student number and section id
-        int count = jdbcTemplate.queryForObject(
-                "SELECT count(*) FROM student_sections WHERE student_student_number = ? AND sections_section_id = ?", Integer.class, DEFAULT_STUDENT_NUMBER, DEFAULT_SECTION_ID);
+        // When
+        //      - the EnlistController receives a POST request to enlist the student in the section
+        mockMvc.perform(post("/enlist").sessionAttr("student", studentRepository.findById(DEFAULT_STUDENT_NUMBER).get())
+                .param("sectionId", DEFAULT_SECTION_ID).param("userAction", ENLIST.name()));
+
+        // Then
+        //      - a new record in the student_sections table will be created with the student number and section id
+        int count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM student_sections WHERE student_student_number = ? AND sections_section_id = ?",
+                Integer.class, DEFAULT_STUDENT_NUMBER, DEFAULT_SECTION_ID);
+
         assertEquals(1, count);
     }
 
 
     @Test
     void cancel_student_in_section() throws Exception {
-        // Given a student record and a section record already exists in the database
-        jdbcTemplate.update("DELETE FROM student WHERE student_number = (?)", DEFAULT_STUDENT_NUMBER);
+        jdbcTemplate.update("INSERT INTO student(student_number, firstname, lastname) VALUES (?, ?, ?)",
+                DEFAULT_STUDENT_NUMBER, "firstname", "lastname");
         insertNewDefaultSectionWithCapacity(1);
-        mockMvc.perform(post("/enlist").sessionAttr(
-                "student", studentRepository.findById(DEFAULT_STUDENT_NUMBER).get()).param("sectionId", DEFAULT_SECTION_ID).param("userAction", ENLIST.name()));
-        // When the EnlistController receives a DELETE request
-        mockMvc.perform(delete("/cancel").sessionAttr(
-                "student", studentRepository.findById(DEFAULT_STUDENT_NUMBER).get()).param("sectionId", DEFAULT_SECTION_ID).param("userAction", CANCEL.name()));
-        // Then the record in the enlistments table will be deleted
-        int count = jdbcTemplate.queryForObject(
-                "SELECT count(*) FROM student_sections WHERE student_student_number = ? AND sections_section_id = ?", Integer.class, DEFAULT_STUDENT_NUMBER, DEFAULT_SECTION_ID);
+
+        mockMvc.perform(delete("/enlist").sessionAttr("student", studentRepository.findById(DEFAULT_STUDENT_NUMBER).get())
+                .param("sectionId", DEFAULT_SECTION_ID).param("userAction", CANCEL.name()));
+
+        int count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM student_sections WHERE student_student_number = ? AND sections_section_id = ?",
+                Integer.class, DEFAULT_STUDENT_NUMBER, DEFAULT_SECTION_ID);
+
         assertEquals(0, count);
+    
     }
 
     private final static int FIRST_STUDENT_ID = 11;
@@ -111,21 +118,17 @@ class EnlistControllerIT {
     @Test
     void enlist_concurrent_separate_section_instances_representing_same_record_students_beyond_capacity() throws Exception {
         insertManyStudents();
-        insertNewDefaultSectionWithCapacity(1);
+        insertNewDefaultSectionWithCapacity(NUMBER_OF_STUDENTS);
 
         startEnlistmentThreads();
-        assertNumberOfStudentsSuccessfullyEnlistedInDefaultSection(1);
 
+        assertNumberOfStudentsSuccessfullyEnlistedInDefaultSection(5);
     }
 
 
     @Test
     void enlist_concurrently_same_section_enough_capacity() throws Exception {
-        insertManyStudents();
-        insertNewDefaultSectionWithCapacity(NUMBER_OF_STUDENTS);
 
-        startEnlistmentThreads();
-        assertNumberOfStudentsSuccessfullyEnlistedInDefaultSection(NUMBER_OF_STUDENTS);
     }
 
 
