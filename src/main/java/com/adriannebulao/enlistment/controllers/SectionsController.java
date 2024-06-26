@@ -47,16 +47,15 @@ class SectionsController {
     public String createSection(@RequestParam String sectionId, @RequestParam String subjectId, @RequestParam Days days,
                                 @RequestParam String start, @RequestParam String end, @RequestParam String roomName,
                                 RedirectAttributes redirectAttrs) {
-        Subject subject = subjectRepo.findById(subjectId).get();
-        Room room = roomRepo.findById(roomName).get();
-        Section section = new Section(sectionId, subject, new Schedule(days, new Period(LocalTime.parse(start),
-                LocalTime.parse(end))), room);
-
-        sectionRepo.save(section);
-
-        redirectAttrs.addFlashAttribute("sectionSuccessMessage",
-                "Successfully created new section " + sectionId);
-
+        try {
+            Subject subject = subjectRepo.findById(subjectId).orElseThrow(() -> new NoSuchElementException("no subject found with subject id: " + subjectId));;
+            Schedule schedule = new Schedule(days, new Period(LocalTime.parse(start), LocalTime.parse(end)));
+            Room room = roomRepo.findById(roomName).orElseThrow(() -> new NoSuchElementException("no room found with room name: " + roomName));
+            sectionRepo.save(new Section(sectionId, subject, schedule, room));
+            redirectAttrs.addFlashAttribute("sectionSuccessMessage", "Successfully created new section " + sectionId);
+        } catch (IllegalArgumentException e) {
+            redirectAttrs.addFlashAttribute("sectionExceptionMessage", e.getMessage());
+        }
         return "redirect:sections";
     }
 
