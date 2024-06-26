@@ -16,22 +16,32 @@ import static com.adriannebulao.enlistment.domain.TestUtils.*;
 
 class SectionsControllerTest {
 
-    @Test
-    void createSection_save_new_section_to_repository() {
-        // Given the controller, repositories & valid parameter arguments for creating a section
-        SubjectRepository subjectRepository = mock(SubjectRepository.class);
-        SectionRepository sectionRepository = mock(SectionRepository.class);
-        RoomRepository roomRepository = mock(RoomRepository.class);
+    private SectionsController sectionsController;
+    private SubjectRepository subjectRepository;
+    private SectionRepository sectionRepository;
+    private RoomRepository roomRepository;
+    private RedirectAttributes redirectAttrs;
 
-        SectionsController sectionsController = new SectionsController();
+    private final String sectionId = DEFAULT_SECTION_ID;
+    private final String subjectId = DEFAULT_SUBJECT_ID;
+    private final String roomId = "Psych217";
+
+    @BeforeEach
+    void setUp() {
+        subjectRepository = mock(SubjectRepository.class);
+        sectionRepository = mock(SectionRepository.class);
+        roomRepository = mock(RoomRepository.class);
+        redirectAttrs = new RedirectAttributesModelMap();
+
+        sectionsController = new SectionsController();
         sectionsController.setSubjectRepo(subjectRepository);
         sectionsController.setSectionRepo(sectionRepository);
         sectionsController.setRoomRepo(roomRepository);
+    }
 
-        final String sectionId = DEFAULT_SECTION_ID;
-        final String subjectId = DEFAULT_SUBJECT_ID;
-        final String roomId = "Psych217";
-
+    @Test
+    void createSection_save_new_section_to_repository() {
+        // Given valid parameter arguments for creating a section
         Subject subject = mock(Subject.class);
         Section section = mock(Section.class);
         Room room = mock(Room.class);
@@ -40,8 +50,6 @@ class SectionsControllerTest {
         when(roomRepository.findById(roomId)).thenReturn(Optional.of(room));
         when(sectionRepository.save(any(Section.class))).thenReturn(section);
 
-        RedirectAttributes redirectAttrs = new RedirectAttributesModelMap();
-
         // When the controller receives the arguments
         String returnPath = sectionsController.createSection(
                 sectionId,
@@ -49,23 +57,20 @@ class SectionsControllerTest {
                 MTH,
                 LocalTime.of(8, 30).toString(),
                 LocalTime.of(10, 0).toString(),
-                "Psych217",
+                roomId,
                 redirectAttrs
         );
 
         // Then
         assertAll(
-                // - it should retrieve the entities from the db, create a new section
+                // Verify that it retrieves the entities from the database
                 () -> verify(subjectRepository).findById(subjectId),
                 () -> verify(roomRepository).findById(roomId),
-
-                // - save the section in the db
+                // Verify that it saves the section in the database
                 () -> verify(sectionRepository).save(any(Section.class)),
-
-                // - set a flash attribute called "sectionSuccessMessage" with the message "Successfully created new section " + sectionId
+                // Verify that the flash attribute is set correctly
                 () -> assertEquals("Successfully created new section " + sectionId, redirectAttrs.getFlashAttributes().get("sectionSuccessMessage")),
-
-                // - return the string value "redirect:sections" to redirect to the GET method
+                // Verify that it returns the correct redirect path
                 () -> assertEquals("redirect:sections", returnPath)
         );
     }
