@@ -7,7 +7,10 @@ import org.springframework.boot.test.autoconfigure.web.servlet.*;
 import org.springframework.boot.test.context.*;
 import org.springframework.jdbc.core.*;
 import org.springframework.test.annotation.*;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.*;
+import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.*;
 
 import java.time.*;
@@ -20,8 +23,8 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 
 
-//@Testcontainers
-//@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+@Testcontainers
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
 @AutoConfigureMockMvc
 @SpringBootTest
 class EnlistControllerIT {
@@ -35,16 +38,45 @@ class EnlistControllerIT {
     @Autowired
     private StudentRepository studentRepository;
 
+    @Container
+    private final PostgreSQLContainer container = new PostgreSQLContainer("postgres:14")
+        .withDatabaseName("enlistment").withUsername("enlistment").withPassword("enlistment");
+
+    @DynamicPropertySource
+    private static void properties(DynamicPropertyRegistry registry){
+        registry.add("springdatasource.url", () -> "jdbc:tc:postgresql:14.0-alpine:///enlistment");
+    }
 
     @Test
     void enlist_student_in_section() throws Exception {
+        // Given a student record and section record in the database,
+        jdbcTemplate.update("INSERT INTO student(student_number, firstname, lastname) VALUES (?, ?, ?)", DEFAULT_STUDENT_NUMBER, "firstname", "lastname");
+        insertNewDefaultSectionWithCapacity(1);
 
+        // When the EnlistController receives a POST request to enlist the student in the section
+        mockMvc.perform(post("/enlist").sessionAttr(
+                "student", studentRepository.findById(DEFAULT_STUDENT_NUMBER).get()).param("sectionId", DEFAULT_SECTION_ID).param("userAction", ENLIST.name()));
+        // Then a new record in the enlistments table will be created with the student number and section id
+        int count = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM student_sections WHERE student_student_number = ? AND sections_section_id = ?", Integer.class, DEFAULT_STUDENT_NUMBER, DEFAULT_SECTION_ID);
+        assertEquals(1, count);
     }
 
 
     @Test
     void cancel_student_in_section() throws Exception {
-
+        // Given a student record and a section record already exists in the database
+        jdbcTemplate.update("DELETE FROM student WHERE student_number = (?)", DEFAULT_STUDENT_NUMBER);
+        insertNewDefaultSectionWithCapacity(1);
+        mockMvc.perform(post("/enlist").sessionAttr(
+                "student", studentRepository.findById(DEFAULT_STUDENT_NUMBER).get()).param("sectionId", DEFAULT_SECTION_ID).param("userAction", ENLIST.name()));
+        // When the EnlistController receives a DELETE request
+        mockMvc.perform(delete("/cancel").sessionAttr(
+                "student", studentRepository.findById(DEFAULT_STUDENT_NUMBER).get()).param("sectionId", DEFAULT_SECTION_ID).param("userAction", CANCEL.name()));
+        // Then the record in the enlistments table will be deleted
+        int count = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM student_sections WHERE student_student_number = ? AND sections_section_id = ?", Integer.class, DEFAULT_STUDENT_NUMBER, DEFAULT_SECTION_ID);
+        assertEquals(0, count);
     }
 
     private final static int FIRST_STUDENT_ID = 11;
@@ -78,13 +110,22 @@ class EnlistControllerIT {
 
     @Test
     void enlist_concurrent_separate_section_instances_representing_same_record_students_beyond_capacity() throws Exception {
+        insertManyStudents();
+        insertNewDefaultSectionWithCapacity(1);
+
+        startEnlistmentThreads();
+        assertNumberOfStudentsSuccessfullyEnlistedInDefaultSection(1);
 
     }
 
 
     @Test
     void enlist_concurrently_same_section_enough_capacity() throws Exception {
+        insertManyStudents();
+        insertNewDefaultSectionWithCapacity(NUMBER_OF_STUDENTS);
 
+        startEnlistmentThreads();
+        assertNumberOfStudentsSuccessfullyEnlistedInDefaultSection(NUMBER_OF_STUDENTS);
     }
 
 

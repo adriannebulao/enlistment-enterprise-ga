@@ -65,6 +65,7 @@ class EnlistController {
         return "enlist";
     }
 
+    @Retryable(retryFor = ObjectOptimisticLockingFailureException.class)
     @PostMapping
     public String enlistOrCancel(@ModelAttribute Student student, @RequestParam String sectionId,
                          @RequestParam UserAction userAction) {
@@ -88,7 +89,7 @@ class EnlistController {
     }
 
 
-    @ExceptionHandler(EnlistmentException.class)
+    //@ExceptionHandler(EnlistmentException.class)
     public String handleException(RedirectAttributes redirectAttrs, EnlistmentException e) {
         redirectAttrs.addFlashAttribute("enlistmentExceptionMessage", e.getMessage());
         return "redirect:enlist";

@@ -30,7 +30,6 @@ class SectionsControllerTest {
         // When the controller receives the arguments
         String returnPath = sectionsController.createSection(sectionId, subjectId, days, start, end, roomName, redirectAttributes);
         SectionRepository sectionRepository = mock(SectionRepository.class);
-        when(sectionRepository.findById(sectionId)).thenReturn(Optional.of(section));
         sectionsController.setSectionRepo(sectionRepository);
         assertEquals("redirect:/enlist", returnPath);
         // Then
