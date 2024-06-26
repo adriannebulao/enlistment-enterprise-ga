@@ -65,7 +65,7 @@ class EnlistController {
         return "enlist";
     }
 
-    @Retryable(retryFor = ObjectOptimisticLockingFailureException.class)
+    @Retryable(retryFor = ObjectOptimisticLockingFailureException.class, maxAttempts = 10)
     @PostMapping
     public String enlistOrCancel(@ModelAttribute Student student, @RequestParam String sectionId,
                          @RequestParam UserAction userAction) {
@@ -73,6 +73,7 @@ class EnlistController {
             Section section = sectionRepo.findById(sectionId).get();
             Session session = entityManager.unwrap(Session.class);
             session.update(student);
+            session.refresh(student);
             userAction.act(student, section);
             sectionRepo.save(section);
             studentRepo.save(student);
