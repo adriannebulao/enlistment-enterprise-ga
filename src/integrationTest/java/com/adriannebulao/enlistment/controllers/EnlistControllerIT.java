@@ -118,17 +118,22 @@ class EnlistControllerIT {
     @Test
     void enlist_concurrent_separate_section_instances_representing_same_record_students_beyond_capacity() throws Exception {
         insertManyStudents();
-        insertNewDefaultSectionWithCapacity(NUMBER_OF_STUDENTS);
+        insertNewDefaultSectionWithCapacity(1);
 
         startEnlistmentThreads();
 
-        assertNumberOfStudentsSuccessfullyEnlistedInDefaultSection(5);
+        assertNumberOfStudentsSuccessfullyEnlistedInDefaultSection(1);
     }
 
 
     @Test
     void enlist_concurrently_same_section_enough_capacity() throws Exception {
+        insertManyStudents();
+        insertNewDefaultSectionWithCapacity(NUMBER_OF_STUDENTS);
 
+        startEnlistmentThreads();
+
+        assertNumberOfStudentsSuccessfullyEnlistedInDefaultSection(5);
     }
 
 
