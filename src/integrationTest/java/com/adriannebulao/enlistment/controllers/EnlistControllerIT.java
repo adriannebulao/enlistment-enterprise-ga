@@ -83,6 +83,7 @@ class EnlistControllerIT {
                 Integer.class, DEFAULT_STUDENT_NUMBER, DEFAULT_SECTION_ID);
 
         assertEquals(0, count);
+    
     }
 
     private final static int FIRST_STUDENT_ID = 11;
