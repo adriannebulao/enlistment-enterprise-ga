@@ -59,4 +59,50 @@ class EnlistControllerTest {
                 () -> assertEquals("redirect:enlist", returnPath)
         );
     }
+
+    @Test
+    void enlistOrCancel_cancel_student_enlistment() {
+        //Given
+        // an enlist controller
+        EnlistController enlistController = new EnlistController();
+        // a student that is in session
+        Student student = mock(Student.class);
+        // a section id
+        final String sectionId = DEFAULT_SECTION_ID;
+        // a section repository
+        SectionRepository sectionRepository = mock(SectionRepository.class);
+        Section section = newDefaultSection();
+        when(sectionRepository.findById(sectionId)).thenReturn(Optional.of(section));
+        enlistController.setSectionRepo(sectionRepository);
+        // a student repository
+        StudentRepository studentRepository = mock(StudentRepository.class);
+        enlistController.setStudentRepo(studentRepository);
+        // an entity manager
+        EntityManager entityManager = mock(EntityManager.class);
+        Session session = mock(Session.class);
+        when(entityManager.unwrap(Session.class)).thenReturn(session);
+        enlistController.setEntityManager(entityManager);
+
+        // When we call the enlistOrCancel method with the CANCEL action
+        String returnPath = enlistController.enlistOrCancel(student, sectionId, UserAction.CANCEL);
+
+        // Then
+        assertAll(
+                // fetch the section from the repository using the sectionId
+                () -> verify(sectionRepository).findById(sectionId),
+                // fetch Hibernate session
+                () -> verify(entityManager).unwrap(Session.class),
+                // reattach student to Hibernate session
+                () -> verify(session).update(student),
+                // call enlist method on student and pass the section
+                () -> verify(student).cancel(section),
+                // save the section
+                () -> verify(sectionRepository).save(section),
+                // save the student
+                () -> verify(studentRepository).save(student),
+                // cancel the enlistment
+                // return to the same page but implement post-redirect-get pattern
+                () -> assertEquals("redirect:enlist", returnPath)
+        );
+    }
 }
