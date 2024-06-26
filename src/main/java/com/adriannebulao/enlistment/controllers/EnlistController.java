@@ -68,35 +68,39 @@ class EnlistController {
     @Retryable(retryFor = ObjectOptimisticLockingFailureException.class, maxAttempts = 10)
     @PostMapping
     public String enlistOrCancel(@ModelAttribute Student student, @RequestParam String sectionId,
-                         @RequestParam UserAction userAction) {
-        if (userAction.name().equals("ENLIST")){
-            Section section = sectionRepo.findById(sectionId).get();
-            Session session = entityManager.unwrap(Session.class);
-            session.update(student);
-            session.refresh(student);
-            userAction.act(student, section);
-            sectionRepo.save(section);
-            studentRepo.save(student);
-        }
-        else if (userAction.name().equals("CANCEL")) {
-            Section section = sectionRepo.findById(sectionId).get();
-            Session session = entityManager.unwrap(Session.class);
-            session.update(student);
-            userAction.act(student, section);
-            sectionRepo.save(section);
-            studentRepo.save(student);
-        }
+                                 @RequestParam UserAction userAction) {
+        Section section = sectionRepo.findById(sectionId).orElseThrow(() -> new RuntimeException("Section not found"));
+
+        updateAndAct(student, section, userAction);
+
+        sectionRepo.save(section);
+        studentRepo.save(student);
+
         return "redirect:enlist";
     }
 
+    /**
+     * Updates the student entity and performs the specified user action.
+     *
+     * @param student   the student to update
+     * @param section   the section to enlist or cancel
+     * @param userAction the action to perform (ENLIST or CANCEL)
+     */
+    private void updateAndAct(Student student, Section section, UserAction userAction) {
+        Session session = entityManager.unwrap(Session.class);
+        session.update(student);
+        if (userAction == UserAction.ENLIST) {
+            session.refresh(student); // Only refresh if enlisting
+        }
+        userAction.act(student, section);
+    }
 
-    //@ExceptionHandler(EnlistmentException.class)
+    @ExceptionHandler(EnlistmentException.class)
     public String handleException(RedirectAttributes redirectAttrs, EnlistmentException e) {
         redirectAttrs.addFlashAttribute("enlistmentExceptionMessage", e.getMessage());
         return "redirect:enlist";
     }
-
-
+    
     void setSectionRepo(SectionRepository sectionRepo) {
         this.sectionRepo = sectionRepo;
     }
