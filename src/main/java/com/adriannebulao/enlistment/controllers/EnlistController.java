@@ -85,7 +85,7 @@ class EnlistController {
             sectionRepo.save(section);
             studentRepo.save(student);
         }
-        return "redirect:/enlist";
+        return "redirect:enlist";
     }
 
 
