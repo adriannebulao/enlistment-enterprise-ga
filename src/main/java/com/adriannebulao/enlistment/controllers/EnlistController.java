@@ -100,7 +100,7 @@ class EnlistController {
         redirectAttrs.addFlashAttribute("enlistmentExceptionMessage", e.getMessage());
         return "redirect:enlist";
     }
-    
+
     void setSectionRepo(SectionRepository sectionRepo) {
         this.sectionRepo = sectionRepo;
     }
