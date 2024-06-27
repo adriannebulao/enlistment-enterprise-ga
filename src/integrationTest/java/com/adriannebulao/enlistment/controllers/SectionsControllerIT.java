@@ -57,12 +57,10 @@ class SectionsControllerIT  {
     @Test
     void createSection_save_to_db() throws Exception {
         // Given a student record and section record in the database,
-        final String roomName = "roomName";
-        jdbcTemplate.update("INSERT INTO room (name, capacity) VALUES (?, ?)", roomName, 1);
-        jdbcTemplate.update("INSERT INTO subject (subject_id) VALUES (?)", DEFAULT_SUBJECT_ID);
         String sectionId = "COMPSCI2";
         RedirectAttributes redirectAttributes = mock(RedirectAttributes.class);
-
+        final String roomName = "roomName";
+        insertRoomAndSubjectToDB();
         // When the SectionController receives a POST request to create a section
         mockMvc.perform(post("/sections").sessionAttr("admin", adminRepository.findById(1).get())
                 .param("sectionId", sectionId)
@@ -83,10 +81,7 @@ class SectionsControllerIT  {
         // Given
         // Two different admins
         insertTwoAdmins();
-
-        final String roomName = "roomName";
-        jdbcTemplate.update("INSERT INTO room (name, capacity) VALUES (?, ?)", roomName, 1);
-        jdbcTemplate.update("INSERT INTO subject (subject_id) VALUES (?)", DEFAULT_SUBJECT_ID);
+        insertRoomAndSubjectToDB();
 
         // When
         // They try to enroll the same subject at the same time
@@ -96,6 +91,12 @@ class SectionsControllerIT  {
         // A race condition should occur and no section should be added to the database
         int numSection = jdbcTemplate.queryForObject("SELECT count(*) FROM section WHERE section_id = ?", Integer.class, DEFAULT_SECTION_ID);
         assertEquals(0, numSection);
+    }
+
+    private void insertRoomAndSubjectToDB(){
+        final String roomName = "roomName";
+        jdbcTemplate.update("INSERT INTO room (name, capacity) VALUES (?, ?)", roomName, 1);
+        jdbcTemplate.update("INSERT INTO subject (subject_id) VALUES (?)", DEFAULT_SUBJECT_ID);
     }
 
     private void insertTwoAdmins() {
