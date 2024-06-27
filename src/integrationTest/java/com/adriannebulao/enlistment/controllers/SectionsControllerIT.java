@@ -2,6 +2,7 @@ package com.adriannebulao.enlistment.controllers;
 
 import com.adriannebulao.enlistment.domain.*;
 import org.junit.jupiter.api.*;
+import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.*;
 import org.springframework.boot.test.context.*;
@@ -16,6 +17,7 @@ import org.testcontainers.junit.jupiter.*;
 
 import java.time.*;
 import java.util.*;
+import java.util.concurrent.CountDownLatch;
 
 import static com.adriannebulao.enlistment.controllers.UserAction.ENLIST;
 import static com.adriannebulao.enlistment.domain.Days.MTH;
@@ -73,5 +75,29 @@ class SectionsControllerIT  {
         int count = jdbcTemplate.queryForObject(
                 "SELECT count(*) FROM section WHERE section_id = ? ", Integer.class, sectionId);
         assertEquals(1, count);
+    }
+
+
+    private static class CreateSectionThread extends Thread {
+        private final Admin admin;
+        private final CountDownLatch latch;
+        private final MockMvc mockMvc;
+
+        public CreateSectionThread(Admin admin, CountDownLatch latch, MockMvc mockMvc) {
+            this.admin = admin;
+            this.latch = latch;
+            this.mockMvc = mockMvc;
+        }
+
+        @Override
+        public void run() {
+            try {
+                latch.await();
+                mockMvc.perform((post("/sections").sessionAttr("admin", admin)
+                        .param("sectionId", DEFAULT_SECTION_ID).param("userAction", ENLIST.name())));
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 }
