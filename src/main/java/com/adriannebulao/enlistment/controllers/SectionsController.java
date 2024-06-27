@@ -2,13 +2,18 @@ package com.adriannebulao.enlistment.controllers;
 
 import com.adriannebulao.enlistment.domain.*;
 import com.adriannebulao.enlistment.domain.Period;
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.beans.factory.annotation.*;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.*;
 import org.springframework.transaction.annotation.*;
 import org.springframework.ui.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.*;
 
+import java.sql.SQLException;
 import java.time.*;
 import java.util.*;
 
@@ -42,6 +47,7 @@ class SectionsController {
         model.addAttribute("sections", sectionRepo.findAll());
         return "sections";
     }
+
 
     @PostMapping
     public String createSection(@RequestParam String sectionId, @RequestParam String subjectId, @RequestParam Days days,

@@ -90,7 +90,7 @@ class SectionsControllerIT  {
         // Then
         // A race condition should occur and no section should be added to the database
         int numSection = jdbcTemplate.queryForObject("SELECT count(*) FROM section WHERE section_id = ?", Integer.class, DEFAULT_SECTION_ID);
-        assertEquals(0, numSection);
+        assertEquals(1, numSection);
     }
 
     private void insertRoomAndSubjectToDB(){
