@@ -77,6 +77,14 @@ class SectionsControllerIT  {
         assertEquals(1, count);
     }
 
+    private void startCreatingSectionThreads() throws Exception {
+        CountDownLatch latch = new CountDownLatch(1);
+        for (int i = 0; i < 2; i++) {
+            new CreateSectionThread(adminRepository.findById(i).orElseThrow(() ->
+                    new NoSuchElementException("No admin w/ admin id " + i + " found in the DB.")),
+                    latch, mockMvc).start();
+        }
+    }
 
     private static class CreateSectionThread extends Thread {
         private final Admin admin;
