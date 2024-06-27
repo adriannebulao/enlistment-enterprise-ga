@@ -77,6 +77,19 @@ class SectionsControllerIT  {
         assertEquals(1, count);
     }
 
+    @Test
+    void createSameSection_two_admin() {
+        final String roomName = "roomName";
+        jdbcTemplate.update("INSERT INTO room (name, capacity) VALUES (?, ?)", roomName, 1);
+        jdbcTemplate.update("INSERT INTO subject (subject_id) VALUES (?)", DEFAULT_SUBJECT_ID);
+        String sectionId = "COMPSCI2";
+        RedirectAttributes redirectAttributes = mock(RedirectAttributes.class);
+
+
+    }
+
+    private void assertNumber
+
     private void startCreatingSectionThreads() throws Exception {
         CountDownLatch latch = new CountDownLatch(1);
         for (int i = 0; i < 2; i++) {
@@ -101,8 +114,13 @@ class SectionsControllerIT  {
         public void run() {
             try {
                 latch.await();
-                mockMvc.perform((post("/sections").sessionAttr("admin", admin)
-                        .param("sectionId", DEFAULT_SECTION_ID).param("userAction", ENLIST.name())));
+                mockMvc.perform(post("/sections").sessionAttr("admin", admin)
+                        .param("sectionId", DEFAULT_SECTION_ID)
+                        .param("subjectId", DEFAULT_SUBJECT_ID)
+                        .param("days", "MTH")
+                        .param("start", "08:30")
+                        .param("end", "10:30")
+                        .param("roomName", "roomName"));
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
