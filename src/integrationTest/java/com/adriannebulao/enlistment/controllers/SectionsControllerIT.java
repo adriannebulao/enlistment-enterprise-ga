@@ -84,6 +84,10 @@ class SectionsControllerIT  {
         // Two different admins
         insertTwoAdmins();
 
+        final String roomName = "roomName";
+        jdbcTemplate.update("INSERT INTO room (name, capacity) VALUES (?, ?)", roomName, 1);
+        jdbcTemplate.update("INSERT INTO subject (subject_id) VALUES (?)", DEFAULT_SUBJECT_ID);
+
         // When
         // They try to enroll the same subject at the same time
         startCreatingSectionThreads();
@@ -96,7 +100,7 @@ class SectionsControllerIT  {
 
     private void insertTwoAdmins() {
         List<Object[]> batchArgs = new ArrayList<>();
-        for (int i = 10; i < 12; i++) {
+        for (int i = 10; i < 20; i++) {
             batchArgs.add(new Object[]{i, "firstname", "lastname"});
         }
         jdbcTemplate.batchUpdate("INSERT INTO admin(id, firstname, lastname) VALUES (?, ?, ?)", batchArgs);
@@ -104,7 +108,7 @@ class SectionsControllerIT  {
 
     private void startCreatingSectionThreads() throws Exception {
         CountDownLatch latch = new CountDownLatch(1);
-        for (int i = 10; i < 12; i++) {
+        for (int i = 10; i < 20; i++) {
             final int adminId = i;
             new CreateSectionThread(adminRepository.findById(adminId).orElseThrow(() ->
                     new NoSuchElementException("No admin w/ admin id " + adminId + " found in the DB.")),
@@ -118,6 +122,8 @@ class SectionsControllerIT  {
         private final Admin admin;
         private final CountDownLatch latch;
         private final MockMvc mockMvc;
+        @Autowired
+        private JdbcTemplate jdbcTemplate;
 
         public CreateSectionThread(Admin admin, CountDownLatch latch, MockMvc mockMvc) {
             this.admin = admin;
