@@ -14,6 +14,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.*;
+import org.testcontainers.shaded.org.bouncycastle.crypto.ec.ECEncryptor;
 
 import java.time.*;
 import java.util.*;
@@ -78,25 +79,39 @@ class SectionsControllerIT  {
     }
 
     @Test
-    void createSameSection_two_admin() {
-        final String roomName = "roomName";
-        jdbcTemplate.update("INSERT INTO room (name, capacity) VALUES (?, ?)", roomName, 1);
-        jdbcTemplate.update("INSERT INTO subject (subject_id) VALUES (?)", DEFAULT_SUBJECT_ID);
-        String sectionId = "COMPSCI2";
-        RedirectAttributes redirectAttributes = mock(RedirectAttributes.class);
+    void createSameSection_two_admin() throws Exception {
+        // Given
+        // Two different admins
+        insertTwoAdmins();
 
+        // When
+        // They try to enroll the same subject at the same time
+        startCreatingSectionThreads();
 
+        // Then
+        // A race condition should occur and no section should be added to the database
+        int numSection = jdbcTemplate.queryForObject("SELECT count(*) FROM section WHERE section_id = ?", Integer.class, DEFAULT_SECTION_ID);
+        assertEquals(0, numSection);
     }
 
-    private void assertNumber
+    private void insertTwoAdmins() {
+        List<Object[]> batchArgs = new ArrayList<>();
+        for (int i = 10; i < 12; i++) {
+            batchArgs.add(new Object[]{i, "firstname", "lastname"});
+        }
+        jdbcTemplate.batchUpdate("INSERT INTO admin(id, firstname, lastname) VALUES (?, ?, ?)", batchArgs);
+    }
 
     private void startCreatingSectionThreads() throws Exception {
         CountDownLatch latch = new CountDownLatch(1);
-        for (int i = 0; i < 2; i++) {
-            new CreateSectionThread(adminRepository.findById(i).orElseThrow(() ->
-                    new NoSuchElementException("No admin w/ admin id " + i + " found in the DB.")),
+        for (int i = 10; i < 12; i++) {
+            final int adminId = i;
+            new CreateSectionThread(adminRepository.findById(adminId).orElseThrow(() ->
+                    new NoSuchElementException("No admin w/ admin id " + adminId + " found in the DB.")),
                     latch, mockMvc).start();
         }
+        latch.countDown();
+        Thread.sleep(5000);
     }
 
     private static class CreateSectionThread extends Thread {
