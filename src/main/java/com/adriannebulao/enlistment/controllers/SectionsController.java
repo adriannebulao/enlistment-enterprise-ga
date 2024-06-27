@@ -48,15 +48,58 @@ class SectionsController {
                                 @RequestParam String start, @RequestParam String end, @RequestParam String roomName,
                                 RedirectAttributes redirectAttrs) {
         try {
-            Subject subject = subjectRepo.findById(subjectId).orElseThrow(() -> new NoSuchElementException("no subject found with subject id: " + subjectId));;
-            Schedule schedule = new Schedule(days, new Period(LocalTime.parse(start), LocalTime.parse(end)));
-            Room room = roomRepo.findById(roomName).orElseThrow(() -> new NoSuchElementException("no room found with room name: " + roomName));
+            // Retrieve and validate Subject, Schedule, and Room
+            Subject subject = getSubjectById(subjectId);
+            Schedule schedule = createSchedule(days, start, end);
+            Room room = getRoomByName(roomName);
+
+            // Create and save new Section
             sectionRepo.save(new Section(sectionId, subject, schedule, room));
+
+            // Add success message to redirect attributes
             redirectAttrs.addFlashAttribute("sectionSuccessMessage", "Successfully created new section " + sectionId);
-        } catch (IllegalArgumentException e) {
+        } catch (NoSuchElementException | IllegalArgumentException e) {
+            // Add error message to redirect attributes
             redirectAttrs.addFlashAttribute("sectionExceptionMessage", e.getMessage());
         }
         return "redirect:sections";
+    }
+
+    /**
+     * Retrieves a Subject by its ID.
+     *
+     * @param subjectId the ID of the subject
+     * @return the Subject object
+     * @throws NoSuchElementException if no subject is found with the given ID
+     */
+    private Subject getSubjectById(String subjectId) {
+        return subjectRepo.findById(subjectId)
+                .orElseThrow(() -> new NoSuchElementException("No subject found with subject ID: " + subjectId));
+    }
+
+    /**
+     * Creates a Schedule object from the given parameters.
+     *
+     * @param days the days of the schedule
+     * @param start the start time as a string
+     * @param end the end time as a string
+     * @return the Schedule object
+     */
+    private Schedule createSchedule(Days days, String start, String end) {
+        Period period = new Period(LocalTime.parse(start), LocalTime.parse(end));
+        return new Schedule(days, period);
+    }
+
+    /**
+     * Retrieves a Room by its name.
+     *
+     * @param roomName the name of the room
+     * @return the Room object
+     * @throws NoSuchElementException if no room is found with the given name
+     */
+    private Room getRoomByName(String roomName) {
+        return roomRepo.findById(roomName)
+                .orElseThrow(() -> new NoSuchElementException("No room found with room name: " + roomName));
     }
 
     @ExceptionHandler(EnlistmentException.class)
