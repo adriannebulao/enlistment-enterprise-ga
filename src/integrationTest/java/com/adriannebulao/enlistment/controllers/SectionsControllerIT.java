@@ -88,7 +88,7 @@ class SectionsControllerIT  {
         startCreatingSectionThreads();
 
         // Then
-        // A race condition should occur and no section should be added to the database
+        // A race condition should occur and only 1 section should be added and the other ignored
         int numSection = jdbcTemplate.queryForObject("SELECT count(*) FROM section WHERE section_id = ?", Integer.class, DEFAULT_SECTION_ID);
         assertEquals(1, numSection);
     }
